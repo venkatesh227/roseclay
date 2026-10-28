@@ -20,10 +20,7 @@ if (!$is_empty) {
 
 // Shipping Threshold (Approx $50 USD -> 4000 INR)
 $shipping_threshold = 4000;
-$tax = $subtotal * 0.10;
-$shipping = $subtotal >= $shipping_threshold ? 0 : 100; // Flat 100 INR shipping if not free
-$total = $subtotal + $tax + $shipping;
-
+$total = $subtotal;
 include 'includes/head.php'; // Include head (styles etc)
 ?>
 <body>
@@ -68,20 +65,20 @@ include 'includes/head.php'; // Include head (styles etc)
                                 <i class="fas fa-weight"></i> <?php echo $item['variation_name']; ?>
                             </p>
                             <?php endif; ?>
-                            <p class="cart-item-price" data-base-price="<?php echo $item['price']; ?>"><?php echo formatPrice($item['price']); ?></p>
+                            <p class="cart-item-price" data-base-price="<?php echo $item['price']; ?>"><?php echo formatVisitorPrice($item['price']); ?></p>
                             <?php if (isset($item['original_price']) && $item['original_price'] > $item['price']): ?>
-                            <p class="cart-item-save">You save: <span data-base-price="<?php echo $item['original_price'] - $item['price']; ?>"><?php echo formatPrice($item['original_price'] - $item['price']); ?></span></p>
+                            <p class="cart-item-save">You save: <span data-base-price="<?php echo $item['original_price'] - $item['price']; ?>"><?php echo formatVisitorPrice($item['original_price'] - $item['price']); ?></span></p>
                             <?php endif; ?>
                         </div>
                         <div class="cart-item-quantity">
-                            <button class="qty-btn" onclick="updateQuantity('<?php echo $cart_key; ?>', <?php echo $item['quantity'] - 1; ?>)">-</button>
+                            <button type="button" class="qty-btn" onclick="updateQuantity('<?php echo $cart_key; ?>', -1)">-</button>
                             <input type="number" value="<?php echo $item['quantity']; ?>" readonly>
-                            <button class="qty-btn" onclick="updateQuantity('<?php echo $cart_key; ?>', <?php echo $item['quantity'] + 1; ?>)">+</button>
+                            <button type="button" class="qty-btn" onclick="updateQuantity('<?php echo $cart_key; ?>', 1)">+</button>
                         </div>
                         <div class="cart-item-total" data-base-price="<?php echo $item['price'] * $item['quantity']; ?>">
-                            <?php echo formatPrice($item['price'] * $item['quantity']); ?>
+                            <?php echo formatVisitorPrice($item['price'] * $item['quantity']); ?>
                         </div>
-                        <button class="cart-item-remove" onclick="removeFromCart('<?php echo $cart_key; ?>')">
+                        <button type="button" class="cart-item-remove" onclick="removeCartItemByKey('<?php echo $cart_key; ?>')">
                             <i class="fas fa-times"></i>
                         </button>
                     </div>
@@ -100,26 +97,14 @@ include 'includes/head.php'; // Include head (styles etc)
                     
                     <div class="summary-row">
                         <span>Subtotal</span>
-                        <span class="cart-subtotal" data-base-price="<?php echo $subtotal; ?>"><?php echo formatPrice($subtotal); ?></span>
+                        <span class="cart-subtotal" data-base-price="<?php echo $subtotal; ?>"><?php echo formatVisitorPrice($subtotal); ?></span>
                     </div>
-                    <!-- <div class="summary-row">
-                        <span>Tax (10%)</span>
-                        <span class="cart-tax" data-base-price="<?php echo $tax; ?>"><?php echo formatPrice($tax); ?></span>
-                    </div> -->
-                    <!-- <div class="summary-row">
-                        <span>Shipping</span>
-                        <span data-base-price="<?php echo $shipping; ?>"><?php echo $shipping == 0 ? 'FREE' : formatPrice($shipping); ?></span>
-                    </div> -->
-                    <?php if ($subtotal < $shipping_threshold): ?>
-                    <div class="summary-note">
-                        <i class="fas fa-info-circle"></i>
-                        Add <span data-base-price="<?php echo $shipping_threshold - $subtotal; ?>"><?php echo formatPrice($shipping_threshold - $subtotal); ?></span> more for free shipping!
-                    </div>
-                    <?php endif; ?>
-                    <!-- <div class="summary-row summary-total">
+
+
+                    <div class="summary-row summary-total">
                         <span>Total</span>
-                        <span class="cart-total" data-base-price="<?php echo $total; ?>"><?php echo formatPrice($total); ?></span>
-                    </div> -->
+                        <span class="cart-total" data-base-price="<?php echo $total; ?>"><?php echo formatVisitorPrice($total); ?></span>
+                    </div>
                     
                     <a href="checkout.php" class="btn btn-primary btn-block">
                         <i class="fas fa-lock"></i> Proceed to Checkout
@@ -143,8 +128,8 @@ include 'includes/head.php'; // Include head (styles etc)
 
     <?php include 'includes/footer.php'; ?>
 
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <?php include 'includes/scripts.php'; ?>
-    <script src="cart.js"></script>
     <script>
         // Sync localStorage cart to PHP session on page load
         document.addEventListener('DOMContentLoaded', function() {
@@ -171,61 +156,129 @@ include 'includes/head.php'; // Include head (styles etc)
             }
         });
         
-        function updateQuantity(cartKey, quantity) {
-            // ... Logic is in cart.js mostly, but cart.php had inline logic too. 
-            // Better to use global function or this one. 
-            // cart.php inline logic was:
+        function updateQuantity(cartKey, change) {
+            const cartItem = document.querySelector(`[data-cart-key="${cartKey}"]`);
+            if (!cartItem) return;
+
+            const quantityInput = cartItem.querySelector('.cart-item-quantity input');
+            const quantity = parseInt(quantityInput.value, 10) + change;
+
             if (quantity < 1) {
-                removeFromCart(cartKey);
+                removeCartItemByKey(cartKey);
                 return;
             }
-            
-            // ... update localStorage ...
-            let cart = JSON.parse(localStorage.getItem('cart') || '[]');
-            const parts = cartKey.split('_');
-            const productId = parts[0];
-            const variationId = parts[1] || 0; // handle simple products
-            
-            const itemIndex = cart.findIndex(item => 
-                item.productId == productId && item.variationId == variationId
-            );
-            
-            if (itemIndex > -1) {
-                cart[itemIndex].quantity = quantity;
-                localStorage.setItem('cart', JSON.stringify(cart));
-            }
-            
+
+            const buttons = cartItem.querySelectorAll('.qty-btn');
+            buttons.forEach(button => button.disabled = true);
+
             fetch('api/update-cart-quantity.php', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({cartKey: cartKey, quantity: quantity})
             })
-            .then(() => location.reload())
-            .catch(error => console.error('Update error:', error));
+            .then(response => response.json())
+            .then(data => {
+                if (!data.success) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Unable to update quantity',
+                    text: data.message || 'Please try again.'
+                });
+                return;
+            }
+
+                quantityInput.value = data.quantity;
+                const itemTotal = cartItem.querySelector('.cart-item-total');
+                itemTotal.dataset.basePrice = data.item_total;
+                itemTotal.textContent = data.item_total_formatted;
+
+                const subtotal = document.querySelector('.cart-subtotal');
+                subtotal.dataset.basePrice = data.cart_subtotal;
+                subtotal.textContent = data.cart_subtotal_formatted;
+
+                const total = document.querySelector('.cart-total');
+                total.dataset.basePrice = data.cart_total;
+                total.textContent = data.cart_total_formatted;
+
+                let cart = JSON.parse(localStorage.getItem('cart') || '[]');
+                const parts = cartKey.split('_');
+                const productId = parts[0];
+                const variationId = parts[1] || 0;
+                const itemIndex = cart.findIndex(item =>
+                    item.productId == productId && (item.variationId || 0) == variationId
+                );
+                if (itemIndex > -1) {
+                    cart[itemIndex].quantity = data.quantity;
+                    localStorage.setItem('cart', JSON.stringify(cart));
+                }
+
+                if (typeof updateCartCount === 'function') {
+                    updateCartCount(data.cart_count);
+                }
+            })
+            .catch(error => {
+                console.error('Update error:', error);
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Request failed',
+                    text: 'Unable to update cart quantity. Please try again.'
+                });
+            })
+            .finally(() => buttons.forEach(button => button.disabled = false));
         }
         
-        function removeFromCart(cartKey) {
-            if (!confirm('Remove this item from cart?')) return;
-            
-            // ... remove from localStorage ...
-            let cart = JSON.parse(localStorage.getItem('cart') || '[]');
-            const parts = cartKey.split('_');
-            const productId = parts[0];
-            const variationId = parts[1] || 0;
-            
-            cart = cart.filter(item => 
-                !(item.productId == productId && item.variationId == variationId)
-            );
-            
-            localStorage.setItem('cart', JSON.stringify(cart));
+        async function removeCartItemByKey(cartKey) {
+            const result = await Swal.fire({
+                title: 'Remove item?',
+                text: 'Are you sure you want to remove this item from your cart?',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#e74c3c',
+                confirmButtonText: 'Yes, remove it',
+                cancelButtonText: 'Keep item'
+            });
+
+            if (!result.isConfirmed) return;
             
             fetch('api/remove-from-cart.php', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({cartKey: cartKey})
             })
-            .then(() => location.reload())
-            .catch(error => console.error('Remove error:', error));
+            .then(response => response.json())
+            .then(async data => {
+                if (data.success) {
+                    let cart = JSON.parse(localStorage.getItem('cart') || '[]');
+                    const [productId, variationId = '0'] = cartKey.split('_');
+                    cart = cart.filter(item =>
+                        !(String(item.productId) === productId &&
+                            String(item.variationId || 0) === variationId)
+                    );
+                    localStorage.setItem('cart', JSON.stringify(cart));
+                    await Swal.fire({
+                        icon: 'success',
+                        title: 'Removed!',
+                        text: data.message || 'Item removed from cart.',
+                        confirmButtonColor: '#f790b2'
+                    });
+                    location.reload();
+                    return;
+                }
+
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Unable to remove item',
+                    text: data.message || 'Please try again.'
+                });
+            })
+            .catch(error => {
+                console.error('Remove error:', error);
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Request failed',
+                    text: 'Unable to remove this item. Please try again.'
+                });
+            });
         }
     </script>
 </body>

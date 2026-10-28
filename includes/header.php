@@ -1,3 +1,8 @@
+<?php
+$visitorCurrency = defined('VISITOR_CURRENCY') ? VISITOR_CURRENCY : (isset($_SESSION['currency']) ? strtoupper($_SESSION['currency']) : (defined('DEFAULT_CURRENCY') ? DEFAULT_CURRENCY : 'INR'));
+$visitorCurrency = in_array($visitorCurrency, ['INR', 'USD'], true) ? $visitorCurrency : 'INR';
+?>
+
 <!-- Top Bar -->
 <div class="top-bar">
     <div class="container">
@@ -9,12 +14,15 @@
             <div class="top-bar-right">
                 <div class="currency-selector">
                     <i class="fas fa-globe"></i>
-                    <select id="currencySelect" class="currency-dropdown">
-                        <option value="INR" selected>₹ INR</option>
-                        <option value="USD">$ USD</option>
+                    <select id="currencySelect" class="currency-dropdown" title="Choose your display currency">
+                        <option value="INR" <?php echo $visitorCurrency === 'INR' ? 'selected' : ''; ?>>₹ INR</option>
+                        <option value="USD" <?php echo $visitorCurrency === 'USD' ? 'selected' : ''; ?>>$ USD</option>
                     </select>
+                    <script>
+                        window.visitorCurrency = <?php echo json_encode($visitorCurrency); ?>;
+                    </script>
                 </div>
-               
+
                 <div class="social-links">
                     <a href="https://www.facebook.com/RoseclayIndia" target="_blank"><i class="fab fa-facebook-f"></i></a>
                     <a href="https://www.instagram.com/roseclayindia/" target="_blank"><i class="fab fa-instagram"></i></a>
@@ -29,7 +37,7 @@
 <header class="header">
     <div class="container">
         <div class="header-content">
-            <div class="logo">
+           <div class="logo">
                 <a href="index.php"><img src="assets/logo.png" alt="RoseClay Logo"></a>
             </div>
             <nav class="nav-menu" id="navMenu">
@@ -59,6 +67,12 @@
                     <i class="fas fa-shopping-cart"></i>
                     <span class="badge">0</span>
                 </button>
+                <?php if (function_exists('isLoggedIn') && isLoggedIn()): ?>
+                    <a class="icon-btn logout-btn" href="logout.php" title="Logout" aria-label="Logout">
+                        <i class="fas fa-sign-out-alt"></i>
+                        <span>Logout</span>
+                    </a>
+                <?php endif; ?>
                 <button class="mobile-menu-btn" id="mobileMenuBtn">
                     <i class="fas fa-bars"></i>
                 </button>

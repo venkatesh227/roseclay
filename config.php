@@ -4,11 +4,34 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
+if (($_SERVER['HTTP_X_CURRENCY_UPDATE'] ?? '') === '1') {
+    header('Content-Type: application/json');
+
+    $input = json_decode(file_get_contents('php://input'), true);
+    $currency = is_array($input) && isset($input['currency']) ? $input['currency'] : null;
+
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+        http_response_code(405);
+        echo json_encode(['success' => false, 'message' => 'Method not allowed']);
+        exit;
+    }
+
+    if (!in_array($currency, ['INR', 'USD'], true)) {
+        http_response_code(400);
+        echo json_encode(['success' => false, 'message' => 'Unsupported currency']);
+        exit;
+    }
+
+    $_SESSION['currency'] = $currency;
+    echo json_encode(['success' => true, 'currency' => $currency]);
+    exit;
+}
+
 // Database Configuration
 define('DB_HOST', 'localhost');
 define('DB_USER', 'root');
 define('DB_PASS', '');
-define('DB_NAME', 'roseclay_24');
+define('DB_NAME', 'roseclay');
 
 // Site Configuration
 $protocol = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? "https" : "http";
@@ -81,6 +104,10 @@ function requireAdmin()
 
 // Currency Configuration
 define('DEFAULT_CURRENCY', 'INR');
+if (!isset($_SESSION['currency']) || !in_array(strtoupper($_SESSION['currency']), ['INR', 'USD'], true)) {
+    $_SESSION['currency'] = DEFAULT_CURRENCY;
+}
+define('VISITOR_CURRENCY', strtoupper($_SESSION['currency']));
 define('USD_TO_INR_RATE', 83); // 1 USD = 83 INR
 
 // Payment Gateway Configuration
@@ -98,6 +125,11 @@ function formatPrice($price, $currency = 'INR')
         return '₹' . number_format($price, 2);
     }
     return '$' . number_format($price / USD_TO_INR_RATE, 2);
+}
+
+function formatVisitorPrice($price)
+{
+    return formatPrice($price, VISITOR_CURRENCY);
 }
 
 function parseWeight($weight_value)

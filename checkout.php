@@ -41,19 +41,106 @@ $page_title = 'Checkout';
 include 'includes/head.php';
 ?>
 <style>
+    /* Modern Shipping Details */
+.shipping-details-card {
+    background: #fff;
+    border: 1px solid #f0dce5;
+    border-radius: 18px;
+    padding: 26px;
+    box-shadow: 0 8px 25px rgba(80, 50, 60, 0.07);
+}
+
+.shipping-details-heading {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 22px;
+}
+
+.shipping-details-icon {
+    width: 46px;
+    height: 46px;
+    border-radius: 12px;
+    background: #fff0f5;
+    color: #f790b2;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+}
+
+.shipping-details-heading h3 {
+    margin: 0;
+    color: #333;
+    font-size: 21px;
+    font-weight: 600;
+}
+
+.shipping-info-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+}
+
+.shipping-info-box {
+    padding: 18px;
+    background: #fff8fa;
+    border: 1px solid #f7dce6;
+    border-radius: 12px;
+}
+
+.shipping-info-label {
+    display: block;
+    color: #888;
+    font-size: 13px;
+    margin-bottom: 7px;
+}
+
+.shipping-info-value {
+    display: block;
+    color: #333;
+    font-size: 17px;
+    font-weight: 600;
+}
+
+.shipping-free {
+    color: #28a745;
+}
+
+.shipping-info-note {
+    margin: 18px 0 0;
+    padding: 13px 15px;
+    background: #f8f8f8;
+    border-radius: 9px;
+    color: #777;
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+@media (max-width: 600px) {
+    .shipping-info-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .shipping-details-card {
+        padding: 20px;
+    }
+}
     /* Validation Styles */
     .form-group {
         position: relative;
     }
 
-    .form-group input.valid {
+    .form-group input.valid,
+    .form-group select.valid {
         border-color: #27ae60;
         background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="%2327ae60" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>');
         background-repeat: no-repeat;
         background-position: right 10px center;
     }
 
-    .form-group input.invalid {
+    .form-group input.invalid,
+    .form-group select.invalid {
         border-color: #e74c3c;
         background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="%23e74c3c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>');
         background-repeat: no-repeat;
@@ -67,7 +154,8 @@ include 'includes/head.php';
         margin-top: 4px;
     }
 
-    .form-group input.invalid+.error-msg {
+    .form-group input.invalid + .error-msg,
+    .form-group select.invalid + .error-msg {
         display: block;
     }
 </style>
@@ -97,6 +185,7 @@ include 'includes/head.php';
                                 <div class="form-group">
                                     <label>First Name</label>
                                     <input type="text" name="first_name" required value="<?php echo htmlspecialchars($user_info['first_name'] ?? ''); ?>">
+                                    <small class="error-msg"></small>
                                 </div>
                                 <div class="form-group">
                                     <label>Last Name</label>
@@ -105,13 +194,7 @@ include 'includes/head.php';
                                 </div>
                                 <div class="form-group">
                                     <label>Phone</label>
-                                    <input type="tel"
-                                        name="phone"
-                                        class="form-control"
-                                        required
-                                        maxlength="20"
-                                        placeholder="+91 9876543210"
-                                        value="<?php echo htmlspecialchars($user_info['phone'] ?? ''); ?>">
+                                    <input type="tel" name="phone" required pattern="[0-9]{10}" title="Please enter a 10-digit mobile number" value="<?php echo htmlspecialchars($user_info['phone'] ?? ''); ?>">
                                     <small class="error-msg"></small>
                                 </div>
                             </div>
@@ -123,6 +206,7 @@ include 'includes/head.php';
                             <div class="form-group">
                                 <label>Street Address</label>
                                 <input type="text" name="address" required placeholder="House number and street name" value="<?php echo htmlspecialchars($user_info['address'] ?? ''); ?>">
+                                <small class="error-msg"></small>
                             </div>
                             <div class="form-group">
                                 <?php
@@ -140,21 +224,31 @@ include 'includes/head.php';
                                     <?php } ?>
 
                                 </select>
+                                <small class="error-msg"></small>
                             </div>
                             <div class="form-row-3">
                                 <div class="form-group">
                                     <label>City</label>
                                     <input type="text" name="city" required value="<?php echo htmlspecialchars($user_info['city'] ?? ''); ?>">
+                                    <small class="error-msg"></small>
                                 </div>
                                 <div class="form-group">
                                     <label>State</label>
                                     <input type="text" name="state" required value="<?php echo htmlspecialchars($user_info['state'] ?? ''); ?>">
-                                </div>
-                                <div class="form-group">
-                                    <label>Zip Code</label>
-                                    <input type="text" name="zip_code" required pattern="[0-9]{6}" title="Please enter a 6-digit PIN code" value="<?php echo htmlspecialchars($user_info['zip_code'] ?? ''); ?>">
                                     <small class="error-msg"></small>
                                 </div>
+<div class="form-group">
+    <label>Post Code</label>
+    <input
+        type="text"
+        name="zip_code"
+        required
+        pattern="[A-Za-z0-9]+([ -][A-Za-z0-9]+)*"
+        title="Please enter a valid postcode or ZIP code"
+        value="<?php echo htmlspecialchars($user_info['zip_code'] ?? ''); ?>"
+    >
+    <small class="error-msg"></small>
+</div>
                             </div>
                             <div class="form-group">
                                 <label>Order Notes (Optional)</label>
@@ -163,15 +257,78 @@ include 'includes/head.php';
                         </form>
                     </div>
 
-                    <div class="checkout-section-card">
-                        <h3><i class="fas fa-truck"></i> Shipping Details</h3>
-                        <div class="shipping-details">
-                            <p><strong>Shipping Zone:</strong> <span id="shipping-zone-detail">N/A</span></p>
-                            <p><strong>Shipping Charge:</strong> <span id="shipping-display-detail"><?php echo formatPrice(0); ?></span></p>
-                            <p style="font-size: 0.95rem; color: #555; margin-top: 0.5rem;">Shipping is calculated based on country zone and total cart weight.</p>
-                        </div>
-                        <input type="hidden" name="shipping_method_id" value="0">
-                    </div>
+<div class="checkout-section-card">
+
+    <div class="shipping-details-card">
+
+        <div class="shipping-details-heading">
+
+            <div class="shipping-details-icon">
+                <i class="fas fa-truck"></i>
+            </div>
+
+            <h3>Shipping Details</h3>
+
+        </div>
+
+
+        <div class="shipping-info-grid">
+
+            <!-- Shipping Zone -->
+            <div class="shipping-info-box">
+
+                <span class="shipping-info-label">
+                    Delivery Zone
+                </span>
+
+                <span
+                    class="shipping-info-value"
+                    id="shipping-zone-detail"
+                >
+                    N/A
+                </span>
+
+            </div>
+
+
+            <!-- Shipping Charge -->
+            <div class="shipping-info-box">
+
+                <span class="shipping-info-label">
+                    Shipping Charge
+                </span>
+
+                <span
+                    class="shipping-info-value shipping-free"
+                    id="shipping-display-detail"
+                >
+                    <?php echo formatPrice(0, VISITOR_CURRENCY); ?>
+                </span>
+
+            </div>
+
+        </div>
+
+
+        <div class="shipping-info-note">
+
+            <i class="fas fa-info-circle"></i>
+
+            Shipping charges are calculated automatically based on
+            your delivery zone and total cart weight.
+
+        </div>
+
+
+        <input
+            type="hidden"
+            name="shipping_method_id"
+            value="0"
+        >
+
+    </div>
+
+</div>
 
                     <div class="checkout-section-card">
                         <h3><i class="fas fa-credit-card"></i> Payment Method</h3>
@@ -218,7 +375,7 @@ include 'includes/head.php';
                                     <p>Qty: <?php echo $item['quantity']; ?></p>
                                 </div>
                                 <div class="checkout-item-price" data-base-price="<?php echo $item['price'] * $item['quantity']; ?>">
-                                    <?php echo formatPrice($item['price'] * $item['quantity']); ?>
+                                    <?php echo formatPrice($item['price'] * $item['quantity'], VISITOR_CURRENCY); ?>
                                 </div>
                             </div>
                         <?php endforeach; ?>
@@ -226,33 +383,27 @@ include 'includes/head.php';
 
                     <div class="summary-row">
                         <span>Subtotal</span>
-                        <span class="cart-subtotal" data-base-price="<?php echo $subtotal; ?>"><?php echo formatPrice($subtotal); ?></span>
+                        <span class="cart-subtotal" data-base-price="<?php echo $subtotal; ?>"><?php echo formatPrice($subtotal, VISITOR_CURRENCY); ?></span>
                     </div>
-                    <!-- <div class="summary-row">
+                    <div class="summary-row">
                         <span>Shipping Zone</span>
                         <span id="shipping-zone">N/A</span>
-                    </div> -->
-                    <div class="summary-row">
-                        <span>Shipping</span>
-                        <span id="shipping-display" data-base-price="0"><?php echo formatPrice(0); ?></span>
                     </div>
                     <div class="summary-row">
-                        <span>Handling Charges</span>
-                        <span id="handling-display">
-                            <?php echo formatPrice(0); ?>
-                        </span>
+                        <span>Shipping</span>
+                        <span id="shipping-display" data-base-price="0"><?php echo formatPrice(0, VISITOR_CURRENCY); ?></span>
                     </div>
                     <div class="summary-row">
                         <span>Fuel Charge</span>
-                        <span id="fuel-display" data-base-price="0"><?php echo formatPrice(0); ?></span>
+                        <span id="fuel-display" data-base-price="0"><?php echo formatPrice(0, VISITOR_CURRENCY); ?></span>
                     </div>
                     <div class="summary-row">
-                        <span>GST</span>
-                        <span id="gst-display" data-base-price="0"><?php echo formatPrice(0); ?></span>
+                        <span>GST Charge</span>
+                        <span id="gst-display" data-base-price="0"><?php echo formatPrice(0, VISITOR_CURRENCY); ?></span>
                     </div>
                     <div class="summary-row summary-total">
                         <span>Total</span>
-                        <span id="total-display" class="cart-total" data-base-price="<?php echo $total; ?>"><?php echo formatPrice($total); ?></span>
+                        <span id="total-display" class="cart-total" data-base-price="<?php echo $total; ?>"><?php echo formatPrice($total, VISITOR_CURRENCY); ?></span>
                     </div>
 
                     <button id="placeOrderBtn" class="btn btn-primary btn-block btn-grande" onclick="processPayment()">
@@ -272,15 +423,13 @@ include 'includes/head.php';
 
     <!-- Payment Scripts -->
     <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="https://www.paypal.com/sdk/js?client-id=<?php echo PAYPAL_CLIENT_ID; ?>&currency=<?php echo PAYPAL_CURRENCY; ?>"></script>
 
     <script>
-        const currency = '<?php echo DEFAULT_CURRENCY; ?>'; // Base currency
+        const currency = '<?php echo VISITOR_CURRENCY; ?>';
         let totalAmountINR = <?php echo $total; ?>;
         let currentShippingCharge = 0.0;
         let currentFuelAmount = 0.0;
-        let currentHandlingCharge = 0;
         let currentGstAmount = 0.0;
         const razorpayKey = '<?php echo RAZORPAY_KEY_ID; ?>';
         const subtotal = <?php echo $subtotal; ?>;
@@ -293,19 +442,22 @@ include 'includes/head.php';
                 params.set('country_id', countryId);
             }
 
+            function displayAmount(amount) {
+                return currency === 'USD' ? convertPrice(amount, currency) : amount;
+            }
+
             try {
                 const response = await fetch('api/get-cart.php?' + params.toString());
                 const data = await response.json();
                 if (!data.success) return;
 
                 currentShippingCharge = parseFloat(data.shipping_charge) || 0.0;
-                currentHandlingCharge = parseFloat(data.handling_charge) || 0;
                 currentFuelAmount = parseFloat(data.fuel_amount) || 0.0;
                 currentGstAmount = parseFloat(data.gst_amount) || 0.0;
                 totalAmountINR = parseFloat(data.grand_total) || subtotal;
 
                 const zoneText = data.zone ? 'Zone ' + data.zone : 'N/A';
-                const shippingText = currentShippingCharge === 0 ? 'FREE' : formatPrice(currentShippingCharge, currency);
+                const shippingText = currentShippingCharge === 0 ? 'FREE' : formatPrice(displayAmount(currentShippingCharge), currency);
 
                 const zoneElements = [
                     document.getElementById('shipping-zone'),
@@ -316,18 +468,11 @@ include 'includes/head.php';
                     document.getElementById('shipping-display-detail')
                 ];
 
-
-                zoneElements.forEach(el => {
-                    if (el) el.textContent = zoneText;
-                });
-                shippingElements.forEach(el => {
-                    if (el) el.textContent = shippingText;
-                });
-                document.getElementById('fuel-display').textContent = formatPrice(currentFuelAmount, currency) + (data.fuel_percentage ? ' (' + data.fuel_percentage + '%)' : '');
-                document.getElementById('gst-display').textContent = formatPrice(currentGstAmount, currency) + (data.gst_percentage ? ' (' + data.gst_percentage + '%)' : '');
-                document.getElementById('total-display').textContent = formatPrice(totalAmountINR, currency);
-                document.getElementById('handling-display').textContent =
-                    formatPrice(currentHandlingCharge, currency);
+                zoneElements.forEach(el => { if (el) el.textContent = zoneText; });
+                shippingElements.forEach(el => { if (el) el.textContent = shippingText; });
+                document.getElementById('fuel-display').textContent = formatPrice(displayAmount(currentFuelAmount), currency) + (data.fuel_percentage ? ' (' + data.fuel_percentage + '%)' : '');
+                document.getElementById('gst-display').textContent = formatPrice(displayAmount(currentGstAmount), currency) + (data.gst_percentage ? ' (' + data.gst_percentage + '%)' : '');
+                document.getElementById('total-display').textContent = formatPrice(displayAmount(totalAmountINR), currency);
             } catch (error) {
                 console.error('Failed to refresh checkout summary:', error);
             }
@@ -354,7 +499,7 @@ include 'includes/head.php';
         // Form Validation Logic
         document.addEventListener('DOMContentLoaded', () => {
             const form = document.getElementById('checkoutForm');
-            const inputs = form.querySelectorAll('input[required], textarea[required]');
+            const inputs = form.querySelectorAll('[required]');
             const countrySelect = document.querySelector('select[name="country"]');
 
             if (countrySelect) {
@@ -363,7 +508,7 @@ include 'includes/head.php';
 
             inputs.forEach(input => {
                 input.addEventListener('blur', () => validateInput(input));
-                input.addEventListener('input', () => {
+                input.addEventListener(input.tagName === 'SELECT' ? 'change' : 'input', () => {
                     if (input.classList.contains('invalid')) validateInput(input);
                 });
             });
@@ -372,45 +517,51 @@ include 'includes/head.php';
         });
 
         function validateInput(input) {
-            const errorMsg = input.nextElementSibling?.classList.contains('error-msg') ? input.nextElementSibling : null;
-            let isValid = input.checkValidity();
+            const errorMsg = input.nextElementSibling?.classList.contains('error-msg')
+                ? input.nextElementSibling
+                : null;
+            const value = input.value.trim();
+            const requiredMessages = {
+                first_name: 'Please enter your first name',
+                last_name: 'Please enter your last name',
+                phone: 'Please enter your phone number',
+                email: 'Please enter your email address',
+                address: 'Please enter your street address',
+                country: 'Please select your country',
+                city: 'Please enter your city',
+                state: 'Please enter your state',
+                zip_code: 'Please enter your postcode or ZIP code'
+            };
 
-            if (input.name === 'phone') {
+            input.setCustomValidity('');
+            let isValid = input.checkValidity() && (!input.required || value !== '');
+            let message = '';
 
-                let phone = input.value.replace(/[\s()-]/g, '');
-
-                if (!/^\+?[0-9]{8,15}$/.test(phone)) {
-
-                    isValid = false;
-
-                    input.setCustomValidity('Please enter a valid mobile number');
-
-                    if (errorMsg) {
-                        errorMsg.textContent = 'Please enter a valid mobile number';
-                    }
-
-                } else {
-
-                    input.setCustomValidity('');
-
-                }
-
-            } else if (input.name === 'zip_code' && input.value && !/^\d{6}$/.test(input.value)) {
+            if (!value && input.required) {
                 isValid = false;
-                input.setCustomValidity('Please enter a valid 6-digit PIN code');
-                if (errorMsg) errorMsg.textContent = 'Please enter a valid 6-digit PIN code';
-            } else {
-                input.setCustomValidity('');
+                message = requiredMessages[input.name] || 'Please complete this field';
+            } else if (input.name === 'email' && !input.checkValidity()) {
+                isValid = false;
+                message = 'Please enter a valid email address';
+            } else if (input.name === 'phone' && !/^\d{10}$/.test(value)) {
+                isValid = false;
+                message = 'Please enter a valid 10-digit number';
+            } else if (input.name === 'zip_code' &&
+                !/^[A-Za-z0-9]+(?:[ -][A-Za-z0-9]+)*$/.test(value)) {
+                isValid = false;
+                message = 'Please enter a valid postcode or ZIP code';
+            } else if (!input.checkValidity()) {
+                isValid = false;
+                message = input.validationMessage;
             }
 
-            if (!isValid) {
-                input.classList.add('invalid');
-                input.classList.remove('valid');
-                if (errorMsg && !errorMsg.textContent) errorMsg.textContent = input.validationMessage;
-            } else {
-                input.classList.remove('invalid');
-                input.classList.add('valid');
+            input.classList.toggle('invalid', !isValid);
+            input.classList.toggle('valid', isValid);
+            input.setAttribute('aria-invalid', String(!isValid));
+            if (errorMsg) {
+                errorMsg.textContent = isValid ? '' : message;
             }
+
             return isValid;
         }
 
@@ -456,75 +607,40 @@ include 'includes/head.php';
         }
 
         async function processPayment() {
-
-            const result = await Swal.fire({
-                title: 'Place Order?',
-                text: 'Do you want to place this order?',
-                icon: 'question',
-                showCancelButton: true,
-                confirmButtonColor: '#28a745',
-                cancelButtonColor: '#d33',
-                confirmButtonText: 'Yes, Place Order',
-                cancelButtonText: 'Cancel'
-            });
-
-            if (!result.isConfirmed) {
-                return;
-            }
-
             const paymentMethod = document.querySelector('input[name="payment_method"]:checked').value;
 
             if (paymentMethod === 'cod') {
-
                 const orderData = await createOrder('cod');
-
                 if (orderData) {
-
-                    Swal.fire({
-                        icon: 'success',
-                        title: 'Order Placed Successfully!',
-                        text: 'Redirecting...',
-                        timer: 1500,
-                        showConfirmButton: false
-                    });
-
-                    setTimeout(() => {
-                        window.location.href = `order-success.php?id=${orderData.order_id}`;
-                    }, 1500);
+                    localStorage.removeItem('cart');
+                    window.location.href = `order-success.php?id=${orderData.order_id}`;
                 }
-
             } else if (paymentMethod === 'razorpay') {
-
                 const orderData = await createOrder('razorpay');
-
                 if (orderData) {
-
                     const options = {
-                        key: razorpayKey,
-                        amount: orderData.amount,
-                        currency: "INR",
-                        name: "RoseClay",
-                        description: "Order #" + orderData.order_number,
-                        image: "assets/logo.png",
-                        order_id: orderData.razorpay_order_id,
-
-                        handler: function(response) {
+                        "key": razorpayKey,
+                        "amount": orderData.amount, // Amount is in currency subunits. Default currency is INR. Hence, 50000 refers to 50000 paise
+                        "currency": "INR",
+                        "name": "RoseClay",
+                        "description": "Order #" + orderData.order_number,
+                        "image": "assets/logo.png",
+                        "order_id": orderData.razorpay_order_id, // This is a sample Order ID. Pass the `id` obtained in the response of Step 1
+                        "handler": function(response) {
+                            // Verify Payment
                             verifyRazorpayPayment(response, orderData.order_id);
                         },
-
-                        prefill: {
-                            name: document.querySelector('input[name="first_name"]').value,
-                            email: document.querySelector('input[name="email"]').value,
-                            contact: document.querySelector('input[name="phone"]').value
+                        "prefill": {
+                            "name": document.querySelector('input[name="first_name"]').value,
+                            "email": document.querySelector('input[name="email"]').value,
+                            "contact": document.querySelector('input[name="phone"]').value
                         },
-
-                        theme: {
-                            color: "#F790B2"
+                        "theme": {
+                            "color": "#F790B2"
                         }
                     };
-
-                    const rzp = new Razorpay(options);
-                    rzp.open();
+                    const rzp1 = new Razorpay(options);
+                    rzp1.open();
                 }
             }
         }
@@ -543,6 +659,7 @@ include 'includes/head.php';
                 });
                 const data = await res.json();
                 if (data.success) {
+                    localStorage.removeItem('cart');
                     window.location.href = `order-success.php?id=${orderId}`;
                 } else {
                     alert('Payment verification failed');
@@ -628,6 +745,7 @@ include 'includes/head.php';
                 });
                 const data = await res.json();
                 if (data.success) {
+                    localStorage.removeItem('cart');
                     window.location.href = `order-success.php?id=${orderId}`;
                 } else {
                     window.location.href = `order-success.php?id=${orderId}&status=warning`;

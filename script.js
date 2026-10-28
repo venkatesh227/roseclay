@@ -133,10 +133,10 @@ document.addEventListener('DOMContentLoaded', () => {
 // ========================================
 const currencyRates = {
     INR: 1,      // Base currency
-    USD: 0.012   // 1 INR = ~0.012 USD (1/83)
+    USD: 1 / 83  // 1 INR converted to USD
 };
 
-let currentCurrency = localStorage.getItem('preferredCurrency') || 'INR'; // Default to INR or saved preference
+let currentCurrency = window.visitorCurrency || 'INR';
 
 // Format price based on currency
 function formatPrice(amount, currency) {
@@ -182,6 +182,16 @@ function updateAllPrices(currency) {
         priceElement.textContent = formatPrice(convertedPrice, currency);
     });
 
+    // Update cart prices, which are always stored in INR.
+    document.querySelectorAll(
+        '.cart-item-price, .cart-item-save span, .cart-item-total, .cart-subtotal, .cart-total'
+    ).forEach(priceElement => {
+        const basePrice = parseFloat(priceElement.dataset.basePrice);
+        if (!Number.isNaN(basePrice)) {
+            priceElement.textContent = formatPrice(convertPrice(basePrice, currency), currency);
+        }
+    });
+
     // Update old prices (strikethrough prices)
     document.querySelectorAll('.price-old, .price-old-large').forEach(priceElement => {
         let basePrice = parseFloat(priceElement.dataset.basePrice);
@@ -219,28 +229,37 @@ function updateAllPrices(currency) {
 // Currency selector change handler
 const currencySelect = document.getElementById('currencySelect');
 if (currencySelect) {
-    currencySelect.addEventListener('change', function () {
-        currentCurrency = this.value;
-        updateAllPrices(currentCurrency);
+    currencySelect.value = currentCurrency;
+    updateAllPrices(currentCurrency);
 
-        // Store preference in localStorage
-        localStorage.setItem('preferredCurrency', currentCurrency);
+    currencySelect.addEventListener('change', async function () {
+        const selectedCurrency = this.value;
+        this.disabled = true;
 
-        // Show toast notification
-        const currencyNames = {
-            USD: 'US Dollar',
-            INR: 'Indian Rupee'
-        };
-        showToast(`Currency changed to ${currencyNames[currentCurrency]}`, 'success');
+        try {
+            const response = await fetch(window.location.href, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Currency-Update': '1'
+                },
+                body: JSON.stringify({currency: selectedCurrency})
+            });
+            const data = await response.json();
+
+            if (!response.ok || !data.success) {
+                throw new Error(data.message || 'Unable to save currency preference.');
+            }
+
+            currentCurrency = selectedCurrency;
+            window.location.reload();
+        } catch (error) {
+            console.error('Currency update error:', error);
+            this.value = currentCurrency;
+            this.disabled = false;
+            showToast('Unable to update currency. Please try again.', 'error');
+        }
     });
-
-    // Load saved currency preference
-    const savedCurrency = localStorage.getItem('preferredCurrency');
-    if (savedCurrency && currencyRates[savedCurrency]) {
-        currentCurrency = savedCurrency;
-        currencySelect.value = savedCurrency;
-        updateAllPrices(savedCurrency);
-    }
 }
 
 // ========================================
@@ -314,10 +333,7 @@ window.addToWishlist = function (productId) {
                 updateBadges();
                 updateWishlistIcons();
             } else if (data.code === 'LOGIN_REQUIRED') {
-                // Redirect to login or show toast
-                if (confirm(data.message + ". Go to login page?")) {
-                    window.location.href = 'login.php';
-                }
+                showLoginRequiredDialog();
             } else {
                 showToast(data.message, 'error');
             }
@@ -327,6 +343,49 @@ window.addToWishlist = function (productId) {
             showToast('An error occurred', 'error');
         });
 };
+
+function showLoginRequiredDialog() {
+    const previousFocus = document.activeElement;
+    const overlay = document.createElement('div');
+    overlay.className = 'login-required-overlay';
+    overlay.innerHTML = `
+        <section class="login-required-card" role="dialog" aria-modal="true" aria-labelledby="login-required-title" aria-describedby="login-required-message">
+            <div class="login-required-icon" aria-hidden="true"><i class="fas fa-heart"></i></div>
+            <h2 id="login-required-title">Login required</h2>
+            <p id="login-required-message">Please log in to add items to your wishlist.</p>
+            <div class="login-required-actions">
+                <button type="button" class="login-required-cancel">Maybe Later</button>
+                <a class="login-required-submit" href="login.php">Go to Login</a>
+            </div>
+            <button type="button" class="login-required-close" aria-label="Close dialog">&times;</button>
+        </section>
+    `;
+
+    const closeButton = overlay.querySelector('.login-required-close');
+    const cancelButton = overlay.querySelector('.login-required-cancel');
+    const loginButton = overlay.querySelector('.login-required-submit');
+
+    function closeDialog() {
+        document.removeEventListener('keydown', handleDialogKeydown);
+        overlay.remove();
+        if (previousFocus instanceof HTMLElement && previousFocus.isConnected) {
+            previousFocus.focus();
+        }
+    }
+
+    function handleDialogKeydown(event) {
+        if (event.key === 'Escape') closeDialog();
+    }
+
+    closeButton.addEventListener('click', closeDialog);
+    cancelButton.addEventListener('click', closeDialog);
+    overlay.addEventListener('click', event => {
+        if (event.target === overlay) closeDialog();
+    });
+    document.addEventListener('keydown', handleDialogKeydown);
+    document.body.appendChild(overlay);
+    loginButton.focus();
+}
 
 function updateWishlistIcons() {
     // Select all heart icons inside buttons that call addToWishlist or similar

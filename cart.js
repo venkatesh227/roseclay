@@ -60,44 +60,6 @@ function updateCartQuantity(productId, quantity) {
         });
 }
 
-// Remove from Cart
-function removeFromCart(productId) {
-    if (!confirm('Remove this item from cart?')) return;
-
-    fetch('api/remove-from-cart.php', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: `product_id=${productId}`
-    })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                showToast(data.message, 'success');
-                updateCartCount(data.cart_count);
-                updateCartTotals(data.cart_subtotal, data.tax, data.cart_total);
-
-                // Remove item from DOM
-                const cartItem = document.querySelector(`[data-product-id="${productId}"]`);
-                if (cartItem) {
-                    cartItem.remove();
-                }
-
-                // Check if cart is empty
-                if (data.cart_count === 0) {
-                    location.reload();
-                }
-            } else {
-                showToast(data.message, 'error');
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            showToast('Error removing from cart', 'error');
-        });
-}
-
 // Update Cart Count in Header
 function updateCartCount(count) {
     const badges = document.querySelectorAll('.cart-btn .badge');
@@ -160,15 +122,6 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     });
 
-    // Remove buttons
-    const removeButtons = document.querySelectorAll('.cart-item-remove');
-    removeButtons.forEach(btn => {
-        btn.addEventListener('click', function () {
-            const cartItem = this.closest('.cart-item');
-            const productId = cartItem.dataset.productId;
-            removeFromCart(productId);
-        });
-    });
 });
 
 // Apply Coupon

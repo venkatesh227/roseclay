@@ -4,6 +4,12 @@ require_once '../config.php';
 
 header('Content-Type: application/json');
 
+if (!isLoggedIn()) {
+    http_response_code(401);
+    echo json_encode(['success' => false, 'message' => 'Please log in to view order details']);
+    exit;
+}
+
 $order_id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
 
 if ($order_id <= 0) {
@@ -11,10 +17,11 @@ if ($order_id <= 0) {
     exit;
 }
 
-// Get order details
-$sql = "SELECT * FROM orders WHERE id = ?";
+// Only allow customers to view their own orders.
+$user_id = (int)$_SESSION['user_id'];
+$sql = "SELECT * FROM orders WHERE id = ? AND user_id = ?";
 $stmt = $conn->prepare($sql);
-$stmt->bind_param("i", $order_id);
+$stmt->bind_param("ii", $order_id, $user_id);
 $stmt->execute();
 $result = $stmt->get_result();
 

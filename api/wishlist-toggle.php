@@ -10,10 +10,27 @@ if (!isLoggedIn()) {
 
 $data = json_decode(file_get_contents('php://input'), true);
 $product_id = isset($data['product_id']) ? (int)$data['product_id'] : 0;
+$action = $data['action'] ?? 'toggle';
 $user_id = $_SESSION['user_id'];
 
 if ($product_id <= 0) {
     echo json_encode(['success' => false, 'message' => 'Invalid product ID']);
+    exit;
+}
+
+if ($action === 'remove') {
+    $delete = $conn->prepare('DELETE FROM wishlist WHERE user_id = ? AND product_id = ?');
+    $delete->bind_param('ii', $user_id, $product_id);
+    if ($delete->execute()) {
+        echo json_encode(['success' => true, 'action' => 'removed', 'message' => 'Removed from wishlist']);
+    } else {
+        echo json_encode(['success' => false, 'message' => 'Unable to remove item from wishlist']);
+    }
+    exit;
+}
+
+if ($action !== 'toggle') {
+    echo json_encode(['success' => false, 'message' => 'Invalid wishlist action']);
     exit;
 }
 

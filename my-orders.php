@@ -97,10 +97,10 @@ $orders = $conn->query("SELECT * FROM orders WHERE user_id = $user_id ORDER BY c
                                 <div class="order-item">
                                     <div class="order-item-details">
                                         <h4><?php echo $item['product_name']; ?></h4>
-                                        <p>Quantity: <?php echo $item['quantity']; ?> × <?php echo formatPrice($item['price']); ?></p>
+                                        <p>Quantity: <?php echo $item['quantity']; ?> × <?php echo formatVisitorPrice($item['price']); ?></p>
                                     </div>
                                     <div class="order-item-total">
-                                        <?php echo formatPrice($item['total']); ?>
+                                        <?php echo formatVisitorPrice($item['total']); ?>
                                     </div>
                                 </div>
                                 <?php endwhile; ?>
@@ -109,7 +109,7 @@ $orders = $conn->query("SELECT * FROM orders WHERE user_id = $user_id ORDER BY c
                             <div class="order-footer">
                                 <div class="order-total">
                                     <span>Order Total:</span>
-                                    <strong><?php echo formatPrice($order['total']); ?></strong>
+                                    <strong><?php echo formatVisitorPrice($order['total']); ?></strong>
                                 </div>
                                 <div class="order-actions">
                                     <button class="btn btn-secondary btn-sm" onclick="viewOrderDetails(<?php echo $order['id']; ?>)">
@@ -152,18 +152,29 @@ $orders = $conn->query("SELECT * FROM orders WHERE user_id = $user_id ORDER BY c
     <?php include 'includes/footer.php'; ?>
     <?php include 'includes/scripts.php'; ?>
     <script>
-        function viewOrderDetails(orderId) {
-            // Fetch order details via AJAX
-            fetch('api/get-order-details.php?id=' + orderId)
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        showOrderModal(data.order, data.items);
-                    }
-                });
+        async function viewOrderDetails(orderId) {
+            const modal = document.getElementById('orderModal');
+            const content = document.getElementById('orderDetailsContent');
+            content.textContent = 'Loading order details...';
+            modal.style.display = 'block';
+
+            try {
+                const response = await fetch('api/get-order-details.php?id=' + encodeURIComponent(orderId));
+                const data = await response.json();
+
+                if (!response.ok || !data.success) {
+                    throw new Error(data.message || 'Unable to load order details.');
+                }
+
+                showOrderModal(data.order, data.items);
+            } catch (error) {
+                console.error('Order details request failed:', error);
+                content.textContent = error.message || 'Unable to load order details. Please try again.';
+            }
         }
 
         function showOrderModal(order, items) {
+            const orderCurrency = window.visitorCurrency || 'INR';
             let html = `
                 <div style="background: #f8f9fa; padding: 1.5rem; border-radius: 12px; margin-bottom: 1.5rem;">
                     <h3>Order #${order.order_number}</h3>
@@ -183,12 +194,12 @@ $orders = $conn->query("SELECT * FROM orders WHERE user_id = $user_id ORDER BY c
                         <tr>
                             <td>${item.product_name}</td>
                             <td>Qty: ${item.quantity}</td>
-                            <td style="text-align: right;">${formatPrice(item.total)}</td>
+                            <td style="text-align: right;">${formatPrice(convertPrice(Number(item.total), orderCurrency), orderCurrency)}</td>
                         </tr>
                     `).join('')}
                     <tr style="border-top: 2px solid #dee2e6; font-weight: bold;">
                         <td colspan="2">Total</td>
-                        <td style="text-align: right;">${formatPrice(order.total)}</td>
+                        <td style="text-align: right;">${formatPrice(convertPrice(Number(order.total), orderCurrency), orderCurrency)}</td>
                     </tr>
                 </table>
             `;

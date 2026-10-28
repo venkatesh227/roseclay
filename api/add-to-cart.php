@@ -8,8 +8,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $product_id = isset($_POST['product_id']) ? (int)$_POST['product_id'] : 0;
     $variation_id = isset($_POST['variation_id']) ? (int)$_POST['variation_id'] : 0;
     $quantity = isset($_POST['quantity']) ? (int)$_POST['quantity'] : 1;
+    $replace_quantity = isset($_POST['replace_quantity']) && (int)$_POST['replace_quantity'] === 1;
     
-    if ($product_id <= 0) {
+    if ($product_id <= 0 || $quantity < 1) {
         echo json_encode(['success' => false, 'message' => 'Invalid product']);
         exit;
     }
@@ -53,25 +54,30 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         $variation_name = $variation['variation_value'];
     }
 
-    // Check stock
-    if ($stock < $quantity) {
-        echo json_encode(['success' => false, 'message' => 'Insufficient stock']);
-        exit;
-    }
-    
     // Initialize cart if not exists
     if (!isset($_SESSION['cart'])) {
         $_SESSION['cart'] = [];
     }
     
-    // Add or update cart
+    // Wishlist selections set the cart quantity; normal additions increment it.
     if (isset($_SESSION['cart'][$cart_key])) {
-        // Check if adding more would exceed stock
-        if (($_SESSION['cart'][$cart_key]['quantity'] + $quantity) > $stock) {
-             echo json_encode(['success' => false, 'message' => 'Cannot add more items than available in stock']);
-             exit;
-        }
-        $_SESSION['cart'][$cart_key]['quantity'] += $quantity;
+        $new_quantity = $replace_quantity
+            ? $quantity
+            : $_SESSION['cart'][$cart_key]['quantity'] + $quantity;
+    } else {
+        $new_quantity = $quantity;
+    }
+
+    if ($stock < $new_quantity) {
+        echo json_encode([
+            'success' => false,
+            'message' => $replace_quantity ? 'Insufficient stock' : 'Cannot add more items than available in stock'
+        ]);
+        exit;
+    }
+
+    if (isset($_SESSION['cart'][$cart_key])) {
+        $_SESSION['cart'][$cart_key]['quantity'] = $new_quantity;
     } else {
         $_SESSION['cart'][$cart_key] = [
             'id' => $product['id'],
@@ -80,7 +86,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             'price' => $price, // Base price (INR)
             'original_price' => $original_price, // Base price (INR)
             'image' => $product['image'],
-            'quantity' => $quantity,
+            'quantity' => $new_quantity,
             'stock' => $stock,
             'variation_name' => $variation_name
         ];

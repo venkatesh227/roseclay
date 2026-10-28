@@ -43,8 +43,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         exit;
     }
 
-    if (!preg_match('/^[0-9]{6}$/', $zip_code)) {
-        echo json_encode(['success' => false, 'message' => 'Zip code must be 6 digits']);
+    if (!preg_match('/^[A-Za-z0-9]+(?:[ -][A-Za-z0-9]+)*$/', $zip_code)) {
+        echo json_encode(['success' => false, 'message' => 'Please enter a valid postcode or ZIP code']);
         exit;
     }
 
@@ -147,6 +147,16 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 echo json_encode(['success' => false, 'message' => 'Order item insert failed: ' . $item_stmt->error]);
                 exit;
             }
+        }
+
+        if ($payment_method === 'cod') {
+            unset($_SESSION['cart']);
+            echo json_encode([
+                'success' => true,
+                'order_id' => $order_id,
+                'order_number' => $order_number
+            ]);
+            exit;
         }
 
         // Response
