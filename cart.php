@@ -10,10 +10,12 @@ $is_empty = empty($cart_items);
 
 // Calculate totals
 $subtotal = 0;
+$cart_count = 0;
 if (!$is_empty) {
     foreach ($cart_items as $item) {
         if (is_array($item) && isset($item['price'], $item['quantity'])) {
             $subtotal += $item['price'] * $item['quantity'];
+            $cart_count += (int)$item['quantity'];
         }
     }
 }
@@ -131,8 +133,18 @@ include 'includes/head.php'; // Include head (styles etc)
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <?php include 'includes/scripts.php'; ?>
     <script>
+        window.cartPageCount = <?php echo json_encode($cart_count); ?>;
+        window.cartDebug = new URLSearchParams(window.location.search).get('cart_debug') === '1';
+
         // Sync localStorage cart to PHP session on page load
         document.addEventListener('DOMContentLoaded', function() {
+            if (window.cartDebug) {
+                console.info('[cart-debug] Cart page rendered from PHP session:', {
+                    itemRows: <?php echo json_encode(count($cart_items)); ?>,
+                    quantityTotal: window.cartPageCount
+                });
+            }
+
             // Check if cart is empty in session but valid in localStorage (e.g. fresh session)
             const cart = JSON.parse(localStorage.getItem('cart') || '[]');
             const isSessionEmpty = <?php echo $is_empty ? 'true' : 'false'; ?>;

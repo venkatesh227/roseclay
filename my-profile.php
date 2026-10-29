@@ -355,6 +355,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         const currentPasswordField = document.getElementById('current-password');
         const newPasswordField = document.getElementById('new-password');
         const confirmNewPasswordField = document.getElementById('confirm-new-password');
+        let passwordFormSubmitted = false;
 
         function validatePasswordField(field) {
             const errorElement = field.nextElementSibling;
@@ -383,16 +384,19 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         }
 
         [currentPasswordField, newPasswordField, confirmNewPasswordField].forEach(field => {
-            field.addEventListener('blur', () => validatePasswordField(field));
             field.addEventListener('input', () => {
-                if (field.classList.contains('invalid')) validatePasswordField(field);
-                if (field.name === 'new_password' && confirmNewPasswordField.value) {
+                if (passwordFormSubmitted || field.classList.contains('invalid')) {
+                    validatePasswordField(field);
+                }
+                if (field.name === 'new_password' &&
+                    (passwordFormSubmitted || confirmNewPasswordField.classList.contains('invalid'))) {
                     validatePasswordField(confirmNewPasswordField);
                 }
             });
         });
 
         changePasswordForm.addEventListener('submit', event => {
+            passwordFormSubmitted = true;
             const valid = [currentPasswordField, newPasswordField, confirmNewPasswordField]
                 .map(validatePasswordField)
                 .every(Boolean);

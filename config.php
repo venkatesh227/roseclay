@@ -31,7 +31,7 @@ if (($_SERVER['HTTP_X_CURRENCY_UPDATE'] ?? '') === '1') {
 define('DB_HOST', 'localhost');
 define('DB_USER', 'root');
 define('DB_PASS', '');
-define('DB_NAME', 'roseclay');
+define('DB_NAME', 'roseclay_l');
 
 // Site Configuration
 $protocol = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? "https" : "http";

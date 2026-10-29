@@ -98,7 +98,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                                     placeholder="your@email.com"
                                     value="<?php echo htmlspecialchars($_POST['email'] ?? '', ENT_QUOTES, 'UTF-8'); ?>"
                                     required
-                                    autofocus
                                     aria-invalid="<?php echo isset($field_errors['email']) ? 'true' : 'false'; ?>"
                                     class="<?php echo isset($field_errors['email']) ? 'invalid' : ''; ?>"
                                 >
@@ -181,6 +180,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         const loginForm = document.getElementById('loginForm');
         const emailField = document.getElementById('login-email');
         const passwordField = document.getElementById('password');
+        let loginSubmitted = false;
 
         function validateLoginField(field) {
             const errorElement = document.getElementById(field.name + '-error');
@@ -202,15 +202,15 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         }
 
         [emailField, passwordField].forEach(field => {
-            field.addEventListener('blur', () => validateLoginField(field));
             field.addEventListener('input', () => {
-                if (field.classList.contains('invalid')) {
+                if (loginSubmitted || field.classList.contains('invalid')) {
                     validateLoginField(field);
                 }
             });
         });
 
         loginForm.addEventListener('submit', event => {
+            loginSubmitted = true;
             const emailValid = validateLoginField(emailField);
             const passwordValid = validateLoginField(passwordField);
 

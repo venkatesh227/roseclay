@@ -93,14 +93,37 @@ function updateCartTotals(subtotal, tax, total) {
 // Load Cart on Page Load
 document.addEventListener('DOMContentLoaded', function () {
     // Update cart count
-    fetch('api/get-cart.php')
-        .then(response => response.json())
+    fetch('api/get-cart.php', {
+        cache: 'no-store',
+        credentials: 'same-origin'
+    })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`Cart API returned HTTP ${response.status}`);
+            }
+            return response.json();
+        })
         .then(data => {
-            if (data.success) {
-                updateCartCount(data.cart_count);
+            if (!data.success || !Number.isFinite(Number(data.cart_count))) {
+                throw new Error(data.message || 'Cart API returned an invalid cart count');
+            }
+
+            updateCartCount(Number(data.cart_count));
+
+            if (window.cartDebug) {
+                const badge = document.querySelector('.cart-btn .badge');
+                console.info('[cart-debug] Cart API response:', {
+                    success: data.success,
+                    apiCount: Number(data.cart_count),
+                    pageCount: window.cartPageCount,
+                    badgeCount: badge?.textContent,
+                    countMatches: Number(data.cart_count) === window.cartPageCount
+                });
             }
         })
-        .catch(error => console.error('Error loading cart:', error));
+        .catch(error => {
+            console.error('[cart-debug] Failed to load cart count:', error);
+        });
 
     // Cart page quantity controls
     const qtyButtons = document.querySelectorAll('.qty-btn');

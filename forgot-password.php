@@ -12,12 +12,15 @@ if (isLoggedIn()) {
 
 $message = '';
 $error = '';
+$email_error = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $email = trim($_POST['email'] ?? '');
 
-    if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-        $error = 'Please enter a valid email address.';
+    if ($email === '') {
+        $email_error = 'Please enter your email address.';
+    } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        $email_error = 'Please enter a valid email address.';
     } else {
         $stmt = $conn->prepare('SELECT id FROM users WHERE email = ? LIMIT 1');
         $stmt->bind_param('s', $email);
@@ -113,6 +116,20 @@ include 'includes/head.php';
 <body>
     <?php include 'includes/header.php'; ?>
 
+    <style>
+        .forgot-password-field-error {
+            display: block;
+            min-height: 1.1em;
+            margin-top: 4px;
+            color: #e74c3c;
+            font-size: 0.75rem;
+        }
+
+        .auth-form .form-group input.invalid {
+            border-color: #e74c3c;
+        }
+    </style>
+
     <section class="auth-section">
         <div class="container">
             <div class="auth-container auth-single-column">
@@ -127,13 +144,23 @@ include 'includes/head.php';
                         <div class="password-reset-notice error"><?php echo htmlspecialchars($error); ?></div>
                     <?php endif; ?>
 
-                    <form method="POST" class="auth-form">
+                    <form method="POST" class="auth-form" id="forgotPasswordForm" novalidate>
                         <div class="form-group">
                             <label for="email">Email Address</label>
                             <div class="input-with-icon">
                                 <i class="fas fa-envelope"></i>
-                                <input id="email" type="email" name="email" placeholder="your@email.com" required>
+                                <input
+                                    id="email"
+                                    type="email"
+                                    name="email"
+                                    placeholder="your@email.com"
+                                    value="<?php echo htmlspecialchars($_POST['email'] ?? '', ENT_QUOTES, 'UTF-8'); ?>"
+                                    required
+                                    aria-invalid="<?php echo $email_error ? 'true' : 'false'; ?>"
+                                    class="<?php echo $email_error ? 'invalid' : ''; ?>"
+                                >
                             </div>
+                            <small class="forgot-password-field-error" id="email-error"><?php echo htmlspecialchars($email_error, ENT_QUOTES, 'UTF-8'); ?></small>
                         </div>
                         <button type="submit" class="btn btn-primary btn-large btn-block">Send OTP</button>
                     </form>
@@ -149,5 +176,40 @@ include 'includes/head.php';
 
     <?php include 'includes/footer.php'; ?>
     <?php include 'includes/scripts.php'; ?>
+    <script>
+        const forgotPasswordForm = document.getElementById('forgotPasswordForm');
+        const emailField = document.getElementById('email');
+        let forgotPasswordSubmitted = false;
+
+        function validateEmailField() {
+            const value = emailField.value.trim();
+            let message = '';
+
+            if (!value) {
+                message = 'Please enter your email address.';
+            } else if (!emailField.validity.valid) {
+                message = 'Please enter a valid email address.';
+            }
+
+            emailField.classList.toggle('invalid', Boolean(message));
+            emailField.setAttribute('aria-invalid', String(Boolean(message)));
+            document.getElementById('email-error').textContent = message;
+            return message === '';
+        }
+
+        emailField.addEventListener('input', () => {
+            if (forgotPasswordSubmitted || emailField.classList.contains('invalid')) {
+                validateEmailField();
+            }
+        });
+
+        forgotPasswordForm.addEventListener('submit', event => {
+            forgotPasswordSubmitted = true;
+            if (!validateEmailField()) {
+                event.preventDefault();
+                emailField.focus();
+            }
+        });
+    </script>
 </body>
 </html>

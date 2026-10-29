@@ -9,6 +9,7 @@ if (isLoggedIn()) {
 $error = '';
 $message = '';
 $reset = null;
+$field_errors = [];
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $email = trim($_POST['email'] ?? '');
@@ -16,15 +17,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $password = $_POST['password'] ?? '';
     $confirm_password = $_POST['confirm_password'] ?? '';
 
-    if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-        $error = 'Please enter a valid email address.';
+    if ($email === '') {
+        $field_errors['email'] = 'Please enter your email address.';
+    } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        $field_errors['email'] = 'Please enter a valid email address.';
+    }
+
+    if ($otp === '') {
+        $field_errors['otp'] = 'Please enter the 6-digit OTP from your email.';
     } elseif (!preg_match('/^[0-9]{6}$/', $otp)) {
-        $error = 'Please enter the 6-digit OTP from your email.';
+        $field_errors['otp'] = 'OTP must contain exactly 6 digits.';
+    }
+
+    if ($password === '') {
+        $field_errors['password'] = 'Please enter a new password.';
     } elseif (strlen($password) < 8) {
-        $error = 'Password must be at least 8 characters long.';
+        $field_errors['password'] = 'Password must be at least 8 characters long.';
+    }
+
+    if ($confirm_password === '') {
+        $field_errors['confirm_password'] = 'Please confirm your new password.';
     } elseif ($password !== $confirm_password) {
-        $error = 'Passwords do not match.';
-    } else {
+        $field_errors['confirm_password'] = 'Passwords do not match.';
+    }
+
+    if (!$field_errors) {
        
 $user_stmt = $conn->prepare(
     'SELECT id FROM users WHERE LOWER(email) = LOWER(?) LIMIT 1'
@@ -145,23 +162,23 @@ include 'includes/head.php';
                         <form method="POST" class="auth-form" id="resetPasswordForm" novalidate>
                             <div class="form-group">
                                 <label for="email">Email Address</label>
-                                <input id="email" type="email" name="email" value="<?php echo htmlspecialchars($_POST['email'] ?? ''); ?>" required aria-describedby="email-error">
-                                <small class="password-reset-field-error" id="email-error"></small>
+                                <input id="email" type="email" name="email" value="<?php echo htmlspecialchars($_POST['email'] ?? '', ENT_QUOTES, 'UTF-8'); ?>" required aria-describedby="email-error" aria-invalid="<?php echo isset($field_errors['email']) ? 'true' : 'false'; ?>" class="<?php echo isset($field_errors['email']) ? 'invalid' : ''; ?>">
+                                <small class="password-reset-field-error" id="email-error"><?php echo htmlspecialchars($field_errors['email'] ?? '', ENT_QUOTES, 'UTF-8'); ?></small>
                             </div>
                             <div class="form-group">
                                 <label for="otp">6-digit OTP</label>
-                                <input id="otp" type="text" name="otp" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="one-time-code" required aria-describedby="otp-error">
-                                <small class="password-reset-field-error" id="otp-error"></small>
+                                <input id="otp" type="text" name="otp" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="one-time-code" required aria-describedby="otp-error" aria-invalid="<?php echo isset($field_errors['otp']) ? 'true' : 'false'; ?>" class="<?php echo isset($field_errors['otp']) ? 'invalid' : ''; ?>">
+                                <small class="password-reset-field-error" id="otp-error"><?php echo htmlspecialchars($field_errors['otp'] ?? '', ENT_QUOTES, 'UTF-8'); ?></small>
                             </div>
                             <div class="form-group">
                                 <label for="password">New Password</label>
-                                <input id="password" type="password" name="password" minlength="8" autocomplete="new-password" required aria-describedby="password-error">
-                                <small class="password-reset-field-error" id="password-error"></small>
+                                <input id="password" type="password" name="password" minlength="8" autocomplete="new-password" required aria-describedby="password-error" aria-invalid="<?php echo isset($field_errors['password']) ? 'true' : 'false'; ?>" class="<?php echo isset($field_errors['password']) ? 'invalid' : ''; ?>">
+                                <small class="password-reset-field-error" id="password-error"><?php echo htmlspecialchars($field_errors['password'] ?? '', ENT_QUOTES, 'UTF-8'); ?></small>
                             </div>
                             <div class="form-group">
                                 <label for="confirm-password">Confirm New Password</label>
-                                <input id="confirm-password" type="password" name="confirm_password" minlength="8" autocomplete="new-password" required aria-describedby="confirm-password-error">
-                                <small class="password-reset-field-error" id="confirm-password-error"></small>
+                                <input id="confirm-password" type="password" name="confirm_password" minlength="8" autocomplete="new-password" required aria-describedby="confirm-password-error" aria-invalid="<?php echo isset($field_errors['confirm_password']) ? 'true' : 'false'; ?>" class="<?php echo isset($field_errors['confirm_password']) ? 'invalid' : ''; ?>">
+                                <small class="password-reset-field-error" id="confirm-password-error"><?php echo htmlspecialchars($field_errors['confirm_password'] ?? '', ENT_QUOTES, 'UTF-8'); ?></small>
                             </div>
                             <button type="submit" class="btn btn-primary btn-large btn-block">Reset Password</button>
                         </form>
@@ -179,6 +196,7 @@ include 'includes/head.php';
 
         if (resetPasswordForm) {
             const resetFields = Array.from(resetPasswordForm.querySelectorAll('input[required]'));
+            let resetSubmitted = false;
 
             function validateResetField(field) {
                 const errorElement = document.getElementById(field.id + '-error');
@@ -211,17 +229,21 @@ include 'includes/head.php';
             }
 
             resetFields.forEach(field => {
-                field.addEventListener('blur', () => validateResetField(field));
                 field.addEventListener('input', () => {
-                    if (field.classList.contains('invalid')) validateResetField(field);
+                    if (resetSubmitted || field.classList.contains('invalid')) {
+                        validateResetField(field);
+                    }
                     if (field.name === 'password') {
                         const confirmField = document.getElementById('confirm-password');
-                        if (confirmField.value) validateResetField(confirmField);
+                        if (resetSubmitted || confirmField.classList.contains('invalid')) {
+                            validateResetField(confirmField);
+                        }
                     }
                 });
             });
 
             resetPasswordForm.addEventListener('submit', event => {
+                resetSubmitted = true;
                 let isValid = true;
                 resetFields.forEach(field => {
                     if (!validateResetField(field)) isValid = false;
